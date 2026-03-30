@@ -39,30 +39,30 @@ python main.py
 
 ## Build a standalone executable (Windows)
 
-Install build tools (PyInstaller is optional for day-to-day use):
+Install build tools:
 
 ```powershell
 pip install -r requirements-dev.txt
 ```
 
-Or install PyInstaller alone:
+This project builds from the spec file by default (recommended).
 
-```powershell
-pip install pyinstaller
-```
+Place your icon at:
 
-Then:
+- `assets/app.ico`
 
-```powershell
-pyinstaller --onefile --windowed --name SoulsPerMin main.py
-```
-
-Output: `dist\SoulsPerMin.exe`
-
-To rebuild using the existing spec file:
+Then build using the spec:
 
 ```powershell
 pyinstaller SoulsPerMin.spec
+```
+
+Output: `dist\SoulsPerMin.exe` (uses `assets/app.ico` via `SoulsPerMin.spec`)
+
+If you want to bypass the spec file for a one-off build:
+
+```powershell
+pyinstaller --onefile --windowed --icon="assets/app.ico" --name SoulsPerMin main.py
 ```
 
 ## What it calculates (overview)

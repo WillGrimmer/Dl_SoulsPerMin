@@ -35,4 +35,6 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    # Default build icon path (repo-relative).
+    icon='assets/app.ico',
 )
