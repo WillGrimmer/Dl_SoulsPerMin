@@ -40,7 +40,7 @@ DENIZEN_T3_PER = 1.95
 
 # Share multipliers
 TWO_PERSON_SHARE_OF_WAVE = 0.54
-THREE_PERSON_SHARE_OF_TROOPER = 0.36
+THREE_PERSON_SHARE_OF_WAVE = 0.36
 
 
 def boxes_total(minutes: int) -> float:
@@ -532,7 +532,7 @@ class MainWindow(QMainWindow):
         total = BASE + PER_MINUTE * minutes
         boxes = boxes_total(minutes)
 
-        # Trooper, Wave (×4 Trooper), 2 person share (×0.54 Wave), 3 person share (×0.36 Trooper)
+        # Trooper, Wave (×4 Trooper), 2 person share (×0.54 Wave), 3 person share (×0.36 Wave)
         self.result_value.setText(f"{total:g}")
         self.detail_label.setText(f"116 + (1.16 × {minutes})")
         wave = total * 4
@@ -540,8 +540,8 @@ class MainWindow(QMainWindow):
         self.wave_detail.setText("Trooper × 4")
         self.share_value.setText(f"{wave * TWO_PERSON_SHARE_OF_WAVE:g}")
         self.share_detail.setText("Wave × 0.54")
-        self.share3_value.setText(f"{total * THREE_PERSON_SHARE_OF_TROOPER:g}")
-        self.share3_detail.setText("Trooper × 0.36")
+        self.share3_value.setText(f"{wave * THREE_PERSON_SHARE_OF_WAVE:g}")
+        self.share3_detail.setText("Wave × 0.36")
 
         self.boxes_value.setText(f"{boxes:g}")
         if minutes < 2:
