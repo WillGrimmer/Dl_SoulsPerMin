@@ -9,8 +9,12 @@ Build exe: pyinstaller --onefile --windowed --name SoulsPerMin main.py
 import sys
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
     QApplication,
+    QCheckBox,
+    QComboBox,
+    QDoubleSpinBox,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -18,6 +22,7 @@ from PySide6.QtWidgets import (
     QScrollArea,
     QSlider,
     QSpinBox,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -41,6 +46,23 @@ DENIZEN_T3_PER = 1.95
 # Share multipliers
 TWO_PERSON_SHARE_OF_WAVE = 0.54
 THREE_PERSON_SHARE_OF_WAVE = 0.36
+METRIC_OPTIONS = [
+    ("None", "None"),
+    ("Trooper", "Trooper"),
+    ("Wave", "Wave"),
+    ("2 person share", "2 person share"),
+    ("3 person share", "3 person share"),
+    ("Boxes", "Boxes"),
+    ("Box Run", "Box Run"),
+    ("Tier 1 Denizen", "Tier 1 Denizen"),
+    ("Tier 2 Denizen", "Tier 2 Denizen"),
+    ("Tier 3 Denizen", "Tier 3 Denizen"),
+    ("2 min camp", "2 min camp"),
+    ("medium camp", "medium camp"),
+    ("church", "church"),
+    ("combo", "combo"),
+    ("Tripple", "Tripple"),
+]
 
 
 def boxes_total(minutes: int) -> float:
@@ -94,6 +116,16 @@ class MainWindow(QMainWindow):
         self.slider.setMaximumHeight(20)
         self.slider.valueChanged.connect(self._update)
         self.minute_spin.valueChanged.connect(self.slider.setValue)
+        self.round_toggle = QCheckBox("Round results")
+        self.round_toggle.setObjectName("roundToggle")
+        self.round_toggle.toggled.connect(lambda _: self._update(self.slider.value()))
+        self.compare_enabled = QCheckBox("Enable Side A / Side B comparison")
+        self.compare_enabled.setObjectName("roundToggle")
+        self.compare_enabled.setChecked(True)
+        self.compare_enabled.toggled.connect(lambda _: self._update(self.slider.value()))
+        self.scan_mode_toggle = QCheckBox("Scan range mode")
+        self.scan_mode_toggle.setObjectName("roundToggle")
+        self.scan_mode_toggle.toggled.connect(lambda _: self._update(self.slider.value()))
 
         row = QHBoxLayout()
         self.min_label = QLabel("1")
@@ -358,6 +390,146 @@ class MainWindow(QMainWindow):
         )
 
         layout.addWidget(camp_strip)
+        self.compare_section = QWidget()
+        compare_layout = QVBoxLayout(self.compare_section)
+        compare_layout.setSpacing(6)
+        compare_layout.setContentsMargins(14, 12, 14, 14)
+
+        compare_title = QLabel("Comparison")
+        compare_title.setObjectName("title")
+        compare_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        compare_layout.addWidget(compare_title)
+
+        # The comparison tab controls are mirrored to the calculator's minute
+        # (so both tabs always use the same run length n).
+        compare_minute_title = QLabel("Minutes (1–60)")
+        compare_minute_title.setObjectName("title")
+        compare_minute_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        compare_layout.addWidget(compare_minute_title)
+
+        self.compare_minute_spin = QSpinBox()
+        self.compare_minute_spin.setRange(1, 60)
+        self.compare_minute_spin.setSuffix(" min")
+        self.compare_minute_spin.setObjectName("minuteSpin")
+        self.compare_minute_spin.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.compare_minute_spin.setKeyboardTracking(True)
+        self.compare_minute_spin.setButtonSymbols(QSpinBox.ButtonSymbols.UpDownArrows)
+        # Spin box edits update the shared minute state (calculator + scan).
+        self.compare_minute_spin.valueChanged.connect(self.slider.setValue)
+
+        compare_spin_row = QHBoxLayout()
+        compare_spin_row.addStretch(1)
+        compare_spin_row.addWidget(self.compare_minute_spin)
+        compare_spin_row.addStretch(1)
+        compare_layout.addLayout(compare_spin_row)
+
+        self.compare_slider = QSlider(Qt.Orientation.Horizontal)
+        self.compare_slider.setMinimum(1)
+        self.compare_slider.setMaximum(60)
+        self.compare_slider.setSingleStep(1)
+        self.compare_slider.setPageStep(1)
+        self.compare_slider.setTickPosition(QSlider.TickPosition.NoTicks)
+        self.compare_slider.setTracking(True)
+        self.compare_slider.setObjectName("minuteSlider")
+        self.compare_slider.setMaximumHeight(20)
+        # Slider edits update the shared minute state (calculator + scan).
+        self.compare_slider.valueChanged.connect(self.slider.setValue)
+
+        compare_slider_row = QHBoxLayout()
+        compare_slider_min = QLabel("1")
+        compare_slider_min.setMinimumWidth(28)
+        compare_slider_max = QLabel("60")
+        compare_slider_max.setMinimumWidth(28)
+        compare_slider_max.setAlignment(Qt.AlignmentFlag.AlignRight)
+        compare_slider_row.addWidget(compare_slider_min)
+        compare_slider_row.addWidget(self.compare_slider, stretch=1)
+        compare_slider_row.addWidget(compare_slider_max)
+        compare_layout.addLayout(compare_slider_row)
+
+        compare_toggle_row = QHBoxLayout()
+        compare_toggle_row.addStretch(1)
+        compare_toggle_row.addWidget(self.compare_enabled)
+        compare_toggle_row.addSpacing(8)
+        compare_toggle_row.addWidget(self.scan_mode_toggle)
+        compare_toggle_row.addStretch(1)
+        compare_layout.addLayout(compare_toggle_row)
+
+        compare_sides = QHBoxLayout()
+        compare_sides.setSpacing(8)
+        side_a_box = QVBoxLayout()
+        side_b_box = QVBoxLayout()
+        side_a_label = QLabel("Side A")
+        side_b_label = QLabel("Side B")
+        side_a_label.setObjectName("title")
+        side_b_label.setObjectName("title")
+        side_a_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        side_b_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        side_a_box.addWidget(side_a_label)
+        side_b_box.addWidget(side_b_label)
+
+        self.side_a_rows: list[tuple[QComboBox, QDoubleSpinBox]] = []
+        self.side_b_rows: list[tuple[QComboBox, QDoubleSpinBox]] = []
+
+        def _add_compare_row(target: list[tuple[QComboBox, QDoubleSpinBox]], box: QVBoxLayout) -> None:
+            r = QHBoxLayout()
+            metric = QComboBox()
+            metric.setObjectName("metricPicker")
+            metric.addItems([label for _, label in METRIC_OPTIONS])
+            mult = QDoubleSpinBox()
+            mult.setRange(0.0, 999.0)
+            mult.setDecimals(2)
+            mult.setSingleStep(0.25)
+            mult.setValue(1.0)
+            mult.setPrefix("x ")
+            mult.setObjectName("multSpin")
+            metric.currentIndexChanged.connect(lambda _: self._update(self.slider.value()))
+            mult.valueChanged.connect(lambda _: self._update(self.slider.value()))
+            r.addWidget(metric, 3)
+            r.addWidget(mult, 2)
+            box.addLayout(r)
+            target.append((metric, mult))
+
+        for _ in range(3):
+            _add_compare_row(self.side_a_rows, side_a_box)
+            _add_compare_row(self.side_b_rows, side_b_box)
+
+        compare_sides.addLayout(side_a_box, 1)
+        compare_sides.addLayout(side_b_box, 1)
+        compare_layout.addLayout(compare_sides)
+
+        self.scan_from_spin = QSpinBox()
+        self.scan_from_spin.setRange(1, 60)
+        self.scan_from_spin.setValue(1)
+        self.scan_from_spin.setPrefix("From ")
+        self.scan_from_spin.setSuffix("m")
+        self.scan_to_spin = QSpinBox()
+        self.scan_to_spin.setRange(1, 60)
+        self.scan_to_spin.setValue(60)
+        self.scan_to_spin.setPrefix("To ")
+        self.scan_to_spin.setSuffix("m")
+        self.scan_from_spin.valueChanged.connect(lambda _: self._update(self.slider.value()))
+        self.scan_to_spin.valueChanged.connect(lambda _: self._update(self.slider.value()))
+        scan_row = QHBoxLayout()
+        scan_row.addStretch(1)
+        scan_row.addWidget(self.scan_from_spin)
+        scan_row.addWidget(self.scan_to_spin)
+        scan_row.addStretch(1)
+        compare_layout.addLayout(scan_row)
+
+        self.compare_result = QLabel()
+        self.compare_result.setObjectName("title")
+        self.compare_result.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.compare_detail = QLabel()
+        self.compare_detail.setObjectName("formula")
+        self.compare_detail.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.compare_detail.setWordWrap(True)
+        self.scan_result = QLabel()
+        self.scan_result.setObjectName("formula")
+        self.scan_result.setWordWrap(True)
+        self.scan_result.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        compare_layout.addWidget(self.compare_result)
+        compare_layout.addWidget(self.compare_detail)
+        compare_layout.addWidget(self.scan_result)
 
         # Minutes control dock (also listed last so it sits at the bottom of the scroll view).
         layout.addWidget(_hline())
@@ -367,15 +539,38 @@ class MainWindow(QMainWindow):
         spin_row.addWidget(self.minute_spin)
         spin_row.addStretch(1)
         layout.addLayout(spin_row)
+        round_row = QHBoxLayout()
+        round_row.addStretch(1)
+        round_row.addWidget(self.round_toggle)
+        round_row.addStretch(1)
+        layout.addLayout(round_row)
         layout.addLayout(row)
 
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QFrame.Shape.NoFrame)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        scroll.setWidget(central)
-        self.setCentralWidget(scroll)
-        self.resize(960, 580)
+        calc_scroll = QScrollArea()
+        calc_scroll.setWidgetResizable(True)
+        calc_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        calc_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        calc_scroll.setWidget(central)
+
+        compare_scroll = QScrollArea()
+        compare_scroll.setWidgetResizable(True)
+        compare_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        compare_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        compare_scroll.setWidget(self.compare_section)
+
+        self.tabs = QTabWidget()
+        self.tabs.addTab(calc_scroll, "Calculator")
+        self.tabs.addTab(compare_scroll, "Comparison")
+        self.setCentralWidget(self.tabs)
+        self.resize(1040, 640)
+
+        navigate_menu = self.menuBar().addMenu("Navigate")
+        self.goto_calc_action = QAction("Calculator", self)
+        self.goto_compare_action = QAction("Comparison", self)
+        self.goto_calc_action.triggered.connect(lambda: self.tabs.setCurrentIndex(0))
+        self.goto_compare_action.triggered.connect(lambda: self.tabs.setCurrentIndex(1))
+        navigate_menu.addAction(self.goto_calc_action)
+        navigate_menu.addAction(self.goto_compare_action)
 
         self._apply_style()
         # Avoid firing valueChanged twice on startup (slider + explicit _update).
@@ -416,6 +611,22 @@ class MainWindow(QMainWindow):
             }
             QSpinBox#minuteSpin::up-button:hover, QSpinBox#minuteSpin::down-button:hover {
                 background: #585b70;
+            }
+            QComboBox#metricPicker, QDoubleSpinBox#multSpin {
+                background-color: #313244;
+                color: #cdd6f4;
+                border: 1px solid #45475a;
+                border-radius: 4px;
+                padding: 3px 6px;
+            }
+            QCheckBox#roundToggle {
+                color: #cdd6f4;
+                spacing: 6px;
+                padding: 2px 0;
+            }
+            QCheckBox#roundToggle::indicator {
+                width: 14px;
+                height: 14px;
             }
             QLabel#valueLabel {
                 font-size: 38px;
@@ -528,48 +739,156 @@ class MainWindow(QMainWindow):
         self.minute_spin.blockSignals(True)
         self.minute_spin.setValue(minutes)
         self.minute_spin.blockSignals(False)
+        # Keep the comparison-tab minute controls in sync with the main calculator.
+        self.compare_minute_spin.blockSignals(True)
+        self.compare_minute_spin.setValue(minutes)
+        self.compare_minute_spin.blockSignals(False)
+        self.compare_slider.blockSignals(True)
+        self.compare_slider.setValue(minutes)
+        self.compare_slider.blockSignals(False)
 
-        total = BASE + PER_MINUTE * minutes
-        boxes = boxes_total(minutes)
+        def fmt(value: float) -> str:
+            if self.round_toggle.isChecked():
+                return str(int(round(value)))
+            return f"{value:g}"
+
+        metrics = self._metrics_for(minutes)
 
         # Trooper, Wave (×4 Trooper), 2 person share (×0.54 Wave), 3 person share (×0.36 Wave)
-        self.result_value.setText(f"{total:g}")
+        self.result_value.setText(fmt(metrics["Trooper"]))
         self.detail_label.setText(f"116 + (1.16 × {minutes})")
-        wave = total * 4
-        self.wave_value.setText(f"{wave:g}")
+        self.wave_value.setText(fmt(metrics["Wave"]))
         self.wave_detail.setText("Trooper × 4")
-        self.share_value.setText(f"{wave * TWO_PERSON_SHARE_OF_WAVE:g}")
+        self.share_value.setText(fmt(metrics["2 person share"]))
         self.share_detail.setText("Wave × 0.54")
-        self.share3_value.setText(f"{wave * THREE_PERSON_SHARE_OF_WAVE:g}")
+        self.share3_value.setText(fmt(metrics["3 person share"]))
         self.share3_detail.setText("Wave × 0.36")
 
-        self.boxes_value.setText(f"{boxes:g}")
+        boxes = metrics["Boxes"]
+        self.boxes_value.setText(fmt(boxes))
         if minutes < 2:
             self.boxes_detail.setText("0 (before 2 min)")
         else:
             self.boxes_detail.setText(f"23 + (2 × {minutes})")
-        self.boxrun_value.setText(f"{boxes * 4:g}")
+        self.boxrun_value.setText(fmt(metrics["Box Run"]))
         self.boxrun_detail.setText("Boxes × 4")
 
         # Denizen tiers, then camp rows (linear combos of t1–t3)
-        t1, t2, t3 = denizen_totals(minutes)
-        self.denizen_t1_value.setText(f"{t1:g}")
+        t1 = metrics["Tier 1 Denizen"]
+        t2 = metrics["Tier 2 Denizen"]
+        t3 = metrics["Tier 3 Denizen"]
+        self.denizen_t1_value.setText(fmt(t1))
         self.denizen_t1_detail.setText(f"41 + (0.44 × {minutes})")
-        self.denizen_t2_value.setText(f"{t2:g}")
+        self.denizen_t2_value.setText(fmt(t2))
         self.denizen_t2_detail.setText(f"68 + (0.73 × {minutes})")
-        self.denizen_t3_value.setText(f"{t3:g}")
+        self.denizen_t3_value.setText(fmt(t3))
         self.denizen_t3_detail.setText(f"181 + (1.95 × {minutes})")
 
-        self.camp_twomin_value.setText(f"{t1 * 3:g}")
+        self.camp_twomin_value.setText(fmt(t1 * 3))
         self.camp_twomin_detail.setText("3 × Tier 1")
-        self.camp_medium_value.setText(f"{t2 * 3:g}")
+        self.camp_medium_value.setText(fmt(t2 * 3))
         self.camp_medium_detail.setText("3 × Tier 2")
-        self.camp_church_value.setText(f"{t1 * 4 + t2:g}")
+        self.camp_church_value.setText(fmt(t1 * 4 + t2))
         self.camp_church_detail.setText("4 × Tier 1 + Tier 2")
-        self.camp_combo_value.setText(f"{t2 * 2 + t3:g}")
+        self.camp_combo_value.setText(fmt(t2 * 2 + t3))
         self.camp_combo_detail.setText("2 × Tier 2 + Tier 3")
-        self.camp_tripple_value.setText(f"{t3 * 3:g}")
+        self.camp_tripple_value.setText(fmt(t3 * 3))
         self.camp_tripple_detail.setText("3 × Tier 3")
+
+        if self.compare_enabled.isChecked():
+            side_a = self._basket_total(self.side_a_rows, metrics)
+            side_b = self._basket_total(self.side_b_rows, metrics)
+            diff = side_a - side_b
+            winner = "Tie"
+            if diff > 0:
+                winner = "Side A"
+            elif diff < 0:
+                winner = "Side B"
+            self.compare_result.setText(
+                f"Side A {fmt(side_a)}  vs  Side B {fmt(side_b)}  ->  {winner}"
+            )
+            self.compare_detail.setText(f"Difference: {fmt(abs(diff))}")
+            if self.scan_mode_toggle.isChecked():
+                start = min(self.scan_from_spin.value(), self.scan_to_spin.value())
+                end = max(self.scan_from_spin.value(), self.scan_to_spin.value())
+                self.scan_result.setText(self._scan_ranges(start, end))
+            else:
+                self.scan_result.setText("")
+        else:
+            self.compare_result.setText("Comparison disabled")
+            self.compare_detail.setText("")
+            self.scan_result.setText("")
+
+    def _metrics_for(self, minutes: int) -> dict[str, float]:
+        total = BASE + PER_MINUTE * minutes
+        wave = total * 4
+        boxes = boxes_total(minutes)
+        t1, t2, t3 = denizen_totals(minutes)
+        return {
+            "None": 0.0,
+            "Trooper": total,
+            "Wave": wave,
+            "2 person share": wave * TWO_PERSON_SHARE_OF_WAVE,
+            "3 person share": wave * THREE_PERSON_SHARE_OF_WAVE,
+            "Boxes": boxes,
+            "Box Run": boxes * 4,
+            "Tier 1 Denizen": t1,
+            "Tier 2 Denizen": t2,
+            "Tier 3 Denizen": t3,
+            "2 min camp": t1 * 3,
+            "medium camp": t2 * 3,
+            "church": t1 * 4 + t2,
+            "combo": t2 * 2 + t3,
+            "Tripple": t3 * 3,
+        }
+
+    def _basket_total(
+        self, rows: list[tuple[QComboBox, QDoubleSpinBox]], metrics: dict[str, float]
+    ) -> float:
+        total = 0.0
+        for metric_box, mult_box in rows:
+            metric = metric_box.currentText()
+            total += metrics.get(metric, 0.0) * mult_box.value()
+        return total
+
+    def _scan_ranges(self, start: int, end: int) -> str:
+        winners: list[tuple[int, str]] = []
+        for minute in range(start, end + 1):
+            metrics = self._metrics_for(minute)
+            side_a = self._basket_total(self.side_a_rows, metrics)
+            side_b = self._basket_total(self.side_b_rows, metrics)
+            diff = side_a - side_b
+            winner = "Tie"
+            if diff > 1e-9:
+                winner = "A"
+            elif diff < -1e-9:
+                winner = "B"
+            winners.append((minute, winner))
+
+        if not winners:
+            return ""
+
+        segments: list[str] = []
+        seg_start, seg_winner = winners[0]
+        prev_minute = seg_start
+        breakpoints: list[int] = []
+        for minute, winner in winners[1:]:
+            if winner != seg_winner:
+                if seg_start == prev_minute:
+                    segments.append(f"{seg_start}: {seg_winner}")
+                else:
+                    segments.append(f"{seg_start}-{prev_minute}: {seg_winner}")
+                breakpoints.append(minute)
+                seg_start, seg_winner = minute, winner
+            prev_minute = minute
+
+        if seg_start == prev_minute:
+            segments.append(f"{seg_start}: {seg_winner}")
+        else:
+            segments.append(f"{seg_start}-{prev_minute}: {seg_winner}")
+
+        bp_text = "None" if not breakpoints else ", ".join(str(v) for v in breakpoints)
+        return "Scan winners | " + " ; ".join(segments) + f" | Breakpoints: {bp_text}"
 
 
 def main() -> None:
