@@ -38,8 +38,9 @@ DENIZEN_T2_PER = 0.73
 DENIZEN_T3_BASE = 181.0
 DENIZEN_T3_PER = 1.95
 
-# Wave-derived: "2 person share" = Wave × this factor
+# Share multipliers
 TWO_PERSON_SHARE_OF_WAVE = 0.54
+THREE_PERSON_SHARE_OF_TROOPER = 0.36
 
 
 def boxes_total(minutes: int) -> float:
@@ -104,7 +105,7 @@ class MainWindow(QMainWindow):
         row.addWidget(self.slider, stretch=1)
         row.addWidget(self.max_label)
 
-        # Row 1: Trooper | Wave | 2 person share
+        # Row 1: Trooper | Wave | 2 person share | 3 person share
         trooper_label = QLabel("Trooper")
         trooper_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         trooper_label.setObjectName("title")
@@ -138,6 +139,17 @@ class MainWindow(QMainWindow):
         self.share_detail = QLabel()
         self.share_detail.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.share_detail.setObjectName("formula")
+
+        share3_label = QLabel("3 person share")
+        share3_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        share3_label.setObjectName("title")
+        share3_label.setWordWrap(True)
+        self.share3_value = QLabel()
+        self.share3_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.share3_value.setObjectName("valueLabelShare3")
+        self.share3_detail = QLabel()
+        self.share3_detail.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.share3_detail.setObjectName("formula")
 
         boxes_label = QLabel("Boxes")
         boxes_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -191,9 +203,16 @@ class MainWindow(QMainWindow):
         share_col.addWidget(self.share_value)
         share_col.addWidget(_hline())
         share_col.addWidget(self.share_detail)
+        share3_col = QVBoxLayout()
+        share3_col.setSpacing(2)
+        share3_col.addWidget(share3_label)
+        share3_col.addWidget(self.share3_value)
+        share3_col.addWidget(_hline())
+        share3_col.addWidget(self.share3_detail)
         tw.addLayout(trooper_col, 1)
         tw.addLayout(wave_col, 1)
         tw.addLayout(share_col, 1)
+        tw.addLayout(share3_col, 1)
 
         boxes_boxrun_strip = QWidget()
         bb = QHBoxLayout(boxes_boxrun_strip)
@@ -422,6 +441,12 @@ class MainWindow(QMainWindow):
                 color: #cba6f7;
                 padding: 4px 4px;
             }
+            QLabel#valueLabelShare3 {
+                font-size: 38px;
+                font-weight: 700;
+                color: #f2cdcd;
+                padding: 4px 4px;
+            }
             QLabel#valueLabelBoxRun {
                 font-size: 38px;
                 font-weight: 700;
@@ -507,7 +532,7 @@ class MainWindow(QMainWindow):
         total = BASE + PER_MINUTE * minutes
         boxes = boxes_total(minutes)
 
-        # Trooper, Wave (×4 Trooper), 2 person share (×0.54 Wave)
+        # Trooper, Wave (×4 Trooper), 2 person share (×0.54 Wave), 3 person share (×0.36 Trooper)
         self.result_value.setText(f"{total:g}")
         self.detail_label.setText(f"116 + (1.16 × {minutes})")
         wave = total * 4
@@ -515,6 +540,8 @@ class MainWindow(QMainWindow):
         self.wave_detail.setText("Trooper × 4")
         self.share_value.setText(f"{wave * TWO_PERSON_SHARE_OF_WAVE:g}")
         self.share_detail.setText("Wave × 0.54")
+        self.share3_value.setText(f"{total * THREE_PERSON_SHARE_OF_TROOPER:g}")
+        self.share3_detail.setText("Trooper × 0.36")
 
         self.boxes_value.setText(f"{boxes:g}")
         if minutes < 2:
